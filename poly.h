@@ -4,6 +4,7 @@
 #include <vector>
 #include <utility>
 #include <cstddef>
+#include <map>
 
 using power = size_t;
 using coeff = int;
@@ -29,7 +30,14 @@ public:
      *  The end of the container to copy elements from
      */
     template <typename Iter>
-    polynomial(Iter begin, Iter end);
+    polynomial(Iter begin, Iter end) {
+        for (auto it = begin; it != end; ++it) {
+            if (it->second != 0 || it->first == 0) {
+                terms[it->first] += it->second;
+            }
+        }
+        if (terms.empty()) terms[0] = 0;
+    }
 
     /**
      * @brief Construct a new polynomial object from an existing polynomial object
@@ -107,6 +115,24 @@ public:
      *  A vector of pairs representing the canonical form of the polynomial
      */
     std::vector<std::pair<power, coeff>> canonical_form() const;
+
+    const std::map<power, coeff>& get_terms() const;
+    std::map<power, coeff>& get_terms();
+
+private:
+    std::map<power, coeff> terms;
+
 };
+
+// Operator overload declarations
+polynomial operator+(const polynomial &a, const polynomial &b);
+polynomial operator+(const polynomial &a, int b);
+polynomial operator+(int a, const polynomial &b);
+
+polynomial operator*(const polynomial &a, const polynomial &b);
+polynomial operator*(const polynomial &a, int b);
+polynomial operator*(int a, const polynomial &b);
+
+polynomial operator%(const polynomial &a, const polynomial &b);
 
 #endif
