@@ -68,17 +68,49 @@ polynomial operator+(int a, const polynomial &b) {
     return b + a;
 }
 
+#include <thread>
+#include <mutex>
+
 polynomial operator*(const polynomial &a, const polynomial &b) {
+    if (a.get_terms().empty() || (a.get_terms().size() == 1 && a.get_terms().begin()->second == 0) ||
+        b.get_terms().empty() || (b.get_terms().size() == 1 && b.get_terms().begin()->second == 0)) {
+        polynomial zero;
+        zero.get_terms().clear();
+        zero.get_terms()[0] = 0;
+        return zero;
+    }
+
     polynomial result;
     result.get_terms().clear();
+
+    std::mutex mtx;
+    std::vector<std::thread> threads;
+
     for (const auto &[pa, ca] : a.get_terms()) {
-        for (const auto &[pb, cb] : b.get_terms()) {
-            result.get_terms()[pa + pb] += ca * cb;
-        }
+        threads.emplace_back([&b, pa, ca, &result, &mtx]() {
+            std::map<power, coeff> local_terms;
+            for (const auto &[pb, cb] : b.get_terms()) {
+                local_terms[pa + pb] += ca * cb;
+            }
+
+            std::lock_guard<std::mutex> lock(mtx);
+            for (const auto &[p, c] : local_terms) {
+                result.get_terms()[p] += c;
+            }
+        });
     }
-    if (result.get_terms().empty()) result.get_terms()[0] = 0;
+
+    for (auto &t : threads) {
+        if (t.joinable()) t.join();
+    }
+
+    if (result.get_terms().empty()) {
+        result.get_terms()[0] = 0;
+    }
+
     return result;
 }
+
 
 polynomial operator*(const polynomial &a, int b) {
     polynomial result;
